@@ -173,8 +173,13 @@ describe('createBintastic', () => {
 
       expect(Array.isArray(execArgv)).toEqual(true);
       expect(execArgv.find((a: string) => a.startsWith('--inspect'))).toBeTypeOf('string');
+
+      // First teardown while debug is active — should preserve
+      teardownProject();
+      expect(existsSync(project.baseDir)).toEqual(true);
     } finally {
       delete process.env.BINTASTIC_DEBUG;
+      // Second teardown with debug cleared — should dispose
       teardownProject();
     }
 
@@ -196,7 +201,36 @@ describe('createBintastic', () => {
     expect(execArgv.find((a: string) => a.startsWith('--inspect'))).toBeTypeOf('string');
     expect(process.env.BINTASTIC_DEBUG).toBeUndefined();
 
+    // First teardown: runBinDebug activated debug mode, so fixtures are preserved
     teardownProject();
+    expect(existsSync(project.baseDir)).toEqual(true);
+
+    // Second teardown with no debug active: should dispose
+    teardownProject();
+    expect(existsSync(project.baseDir)).toEqual(false);
+  });
+
+  test('runBinDebug preserves tmp dir on teardown without process.env mutation (CHK-005)', async () => {
+    const { setupProject, teardownProject, runBinDebug } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
+    });
+
+    const project = await setupProject();
+
+    expect(process.env.BINTASTIC_DEBUG).toBeUndefined();
+
+    await runBinDebug({});
+
+    // process.env must remain unset — runBinDebug should not mutate it
+    expect(process.env.BINTASTIC_DEBUG).toBeUndefined();
+
+    teardownProject();
+
+    // Because runBinDebug activated debug mode via execa env, teardownProject must preserve fixtures
+    expect(existsSync(project.baseDir)).toEqual(true);
+
+    // Second teardown (with no debug active) should clean up
+    project.dispose();
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
