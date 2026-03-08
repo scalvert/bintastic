@@ -7,7 +7,7 @@ export interface BintasticOptions<TProject> {
   /**
    * The absolute path to the bin to invoke
    */
-  binPath: string | (<TProject extends BintasticProject>(project: TProject) => string);
+  binPath: string | ((project: TProject) => string);
   /**
    * An array of static arguments that will be used every time when running the bin
    */
