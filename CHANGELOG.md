@@ -7,6 +7,22 @@
 
 
 
+## v4.0.2 (2026-03-08)
+
+#### :bug: Bug Fix
+
+- [#267](https://github.com/scalvert/bintastic/pull/267) fix: runBin/runBinDebug/teardown refactor (CHK-005, CHK-006, CHK-007) ([@scalvert](https://github.com/scalvert))
+- [#266](https://github.com/scalvert/bintastic/pull/266) fix: dispose previous project on double setupProject call (CHK-004) ([@scalvert](https://github.com/scalvert))
+- [#265](https://github.com/scalvert/bintastic/pull/265) fix: replace unsafe type casts with accurate types (CHK-002, CHK-003) ([@scalvert](https://github.com/scalvert))
+- [#264](https://github.com/scalvert/bintastic/pull/264) fix: remove no-op write() override from BintasticProject (CHK-008) ([@scalvert](https://github.com/scalvert))
+- [#263](https://github.com/scalvert/bintastic/pull/263) fix: remove TProject generic shadowing in binPath (CHK-001) ([@scalvert](https://github.com/scalvert))
+
+#### Committers: 1
+
+- Steve Calvert ([@scalvert](https://github.com/scalvert))
+
+
+
 ## v4.0.1 (2026-01-07)
 
 #### :bug: Bug Fix
