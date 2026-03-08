@@ -188,7 +188,7 @@ export function createBintastic<TProject extends BintasticProject>(
    */
   async function setupProject() {
     project =
-      'createProject' in mergedOptions
+      typeof mergedOptions.createProject === 'function'
         ? await mergedOptions.createProject()
         : (new BintasticProject() as TProject);
 
