@@ -100,17 +100,17 @@ const DEFAULT_BINTASTIC_OPTIONS = {
  */
 function parseArgs(args: RunBinArgs): RunOptions {
   if (args.length > 0 && typeof args[args.length - 1] === 'object') {
-    const argsCopy = [...args];
-    const execaOptions = argsCopy.pop();
+    const last = args[args.length - 1] as Options;
+    const rest = args.slice(0, -1).filter((a): a is string => typeof a === 'string');
     return {
-      args: argsCopy,
-      execaOptions,
-    } as RunOptions;
+      args: rest,
+      execaOptions: last,
+    };
   } else {
     return {
-      args: [...args],
+      args: args.filter((a): a is string => typeof a === 'string'),
       execaOptions: {},
-    } as RunOptions;
+    };
   }
 }
 
@@ -127,7 +127,7 @@ export function createBintastic<TProject extends BintasticProject>(
   const mergedOptions = {
     ...DEFAULT_BINTASTIC_OPTIONS,
     ...options,
-  } as Required<BintasticOptions<TProject>>;
+  } as BintasticOptions<TProject> & { staticArgs: string[] };
 
   /**
    * @param {...RunBinArgs} args - Arguments or execa options.
