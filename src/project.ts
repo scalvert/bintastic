@@ -1,5 +1,4 @@
 import { execa, type ResultPromise } from 'execa';
-import type { DirJSON } from 'fixturify';
 import { Project } from 'fixturify-project';
 
 const ROOT = process.cwd();
@@ -29,14 +28,6 @@ export default class BintasticProject extends Project {
    */
   gitInit(): ResultPromise {
     return execa('git', ['init', '-q', this.baseDir]);
-  }
-
-  /**
-   * Writes the project files to disk.
-   * @param {DirJSON} dirJSON - Optional directory JSON to merge before writing.
-   */
-  async write(dirJSON?: DirJSON): Promise<void> {
-    return super.write(dirJSON);
   }
 
   /**
