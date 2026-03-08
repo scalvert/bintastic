@@ -187,6 +187,10 @@ export function createBintastic<TProject extends BintasticProject>(
    * Sets up the specified project for use within tests.
    */
   async function setupProject() {
+    if (project) {
+      project.dispose();
+    }
+
     project =
       typeof mergedOptions.createProject === 'function'
         ? await mergedOptions.createProject()
