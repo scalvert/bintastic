@@ -123,6 +123,7 @@ export function createBintastic<TProject extends BintasticProject>(
   options: BintasticOptions<TProject>
 ): CreateBintasticResult<TProject> {
   let project: TProject;
+  let _preserveFixtures = false;
 
   const mergedOptions = {
     ...DEFAULT_BINTASTIC_OPTIONS,
@@ -130,21 +131,19 @@ export function createBintastic<TProject extends BintasticProject>(
   } as Required<BintasticOptions<TProject>>;
 
   /**
-   * @param {...RunBinArgs} args - Arguments or execa options.
+   * Shared execution body for runBin and runBinDebug. Parses debug env, sets inspector
+   * flags, and updates _preserveFixtures so teardownProject sees debug state correctly.
+   * @param {RunOptions} parsedArgs - Already-parsed arguments and execa options.
+   * @param {string} binPath - Resolved path to the bin script.
    * @returns {ResultPromise} An instance of execa's result promise.
    */
-  function runBin(...args: RunBinArgs): ResultPromise {
-    const mergedRunOptions = parseArgs(args);
-    const binPath =
-      typeof mergedOptions.binPath === 'function'
-        ? mergedOptions.binPath(project)
-        : mergedOptions.binPath;
-
-    const optionsEnv = mergedRunOptions.execaOptions.env;
+  function _runBinInternal(parsedArgs: RunOptions, binPath: string): ResultPromise {
+    const optionsEnv = parsedArgs.execaOptions.env;
     const debugEnv = optionsEnv?.BINTASTIC_DEBUG ?? process.env.BINTASTIC_DEBUG;
 
     const nodeOptions: string[] = [];
     if (debugEnv && debugEnv !== '0' && debugEnv.toLowerCase() !== 'false') {
+      _preserveFixtures = true;
       if (debugEnv.toLowerCase() === 'break') {
         nodeOptions.push('--inspect-brk=0');
       } else {
@@ -153,14 +152,28 @@ export function createBintastic<TProject extends BintasticProject>(
       console.log(`[bintastic] Debugging enabled. Fixture: ${project.baseDir}`);
     }
 
-    const resolvedCwd = mergedRunOptions.execaOptions.cwd ?? project.baseDir;
+    const resolvedCwd = parsedArgs.execaOptions.cwd ?? project.baseDir;
 
-    return execaNode(binPath, [...mergedOptions.staticArgs, ...mergedRunOptions.args], {
+    return execaNode(binPath, [...mergedOptions.staticArgs, ...parsedArgs.args], {
       reject: false,
       cwd: resolvedCwd,
       nodeOptions,
-      ...mergedRunOptions.execaOptions,
+      ...parsedArgs.execaOptions,
     });
+  }
+
+  /**
+   * @param {...RunBinArgs} args - Arguments or execa options.
+   * @returns {ResultPromise} An instance of execa's result promise.
+   */
+  function runBin(...args: RunBinArgs): ResultPromise {
+    if (!project) throw new Error('[bintastic] setupProject() must be called before runBin()');
+    const parsedArgs = parseArgs(args);
+    const binPath =
+      typeof mergedOptions.binPath === 'function'
+        ? mergedOptions.binPath(project)
+        : mergedOptions.binPath;
+    return _runBinInternal(parsedArgs, binPath);
   }
 
   /**
@@ -168,8 +181,8 @@ export function createBintastic<TProject extends BintasticProject>(
    * @param {...RunBinArgs} args Arguments identical to runBin
    */
   function runBinDebug(...args: RunBinArgs): ResultPromise {
+    if (!project) throw new Error('[bintastic] setupProject() must be called before runBinDebug()');
     const parsedArgs = parseArgs(args);
-    // Pass debug mode through execa env options to avoid race conditions with process.env
     const debugEnv = process.env.BINTASTIC_DEBUG || 'attach';
     parsedArgs.execaOptions = {
       ...parsedArgs.execaOptions,
@@ -178,9 +191,11 @@ export function createBintastic<TProject extends BintasticProject>(
         BINTASTIC_DEBUG: debugEnv,
       },
     };
-    // Reconstruct args array with merged options
-    const reconstructedArgs: RunBinArgs = [...parsedArgs.args, parsedArgs.execaOptions];
-    return runBin(...reconstructedArgs);
+    const binPath =
+      typeof mergedOptions.binPath === 'function'
+        ? mergedOptions.binPath(project)
+        : mergedOptions.binPath;
+    return _runBinInternal(parsedArgs, binPath);
   }
 
   /**
@@ -213,9 +228,12 @@ export function createBintastic<TProject extends BintasticProject>(
    * When BINTASTIC_DEBUG is set, fixtures are preserved for inspection.
    */
   function teardownProject() {
+    if (!project)
+      throw new Error('[bintastic] setupProject() must be called before teardownProject()');
     const debugEnv = process.env.BINTASTIC_DEBUG;
-    if (debugEnv && debugEnv !== '0' && debugEnv.toLowerCase() !== 'false') {
+    if (_preserveFixtures || (debugEnv && debugEnv !== '0' && debugEnv.toLowerCase() !== 'false')) {
       console.log(`[bintastic] Fixture preserved: ${project.baseDir}`);
+      _preserveFixtures = false;
       return;
     }
 
