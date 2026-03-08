@@ -200,6 +200,21 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
+  test('setupProject called twice disposes the first project directory', async () => {
+    const { setupProject, teardownProject } = createBintastic({
+      binPath: './foo',
+    });
+
+    const firstProject = await setupProject();
+    const firstBaseDir = firstProject.baseDir;
+
+    await setupProject();
+
+    expect(existsSync(firstBaseDir)).toEqual(false);
+
+    teardownProject();
+  });
+
   test('BINTASTIC_DEBUG preserves tmp dir on teardown', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
       binPath: fileURLToPath(new URL('fixtures/fake-bin.js', import.meta.url)),
