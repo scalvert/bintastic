@@ -75,9 +75,13 @@ teardownProject(); // removes temp directory
 **Writing fixture files:**
 
 ```ts snippet=writing-fixtures.ts
+import { json, text } from 'bintastic';
+
 project.files = {
-  'src/index.js': 'export default 42;',
-  'package.json': JSON.stringify({ name: 'test' }),
+  'src/index.js': text`
+    export default 42;
+  `,
+  'package.json': json`{ "name": "test" }`,
 };
 await project.write();
 ```

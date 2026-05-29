@@ -1,7 +1,7 @@
 import { statSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, test, expect } from 'vitest';
-import { createBintastic, BintasticProject } from '../src';
+import { createBintastic, BintasticProject, json, text } from '../src';
 
 class FakeProject extends BintasticProject {}
 
@@ -270,5 +270,53 @@ describe('createBintastic', () => {
     }
 
     expect(existsSync(project.baseDir)).toEqual(false);
+  });
+});
+
+describe('json', () => {
+  test('stringifies JSON template content', () => {
+    expect(json`{ "foo": "bar" }`).toEqual('{"foo":"bar"}');
+  });
+
+  test('serializes interpolated values as JSON', () => {
+    expect(
+      json`{ "name": ${'test'}, "nested": ${{ enabled: true }}, "items": ${['a', 'b']} }`
+    ).toEqual('{"name":"test","nested":{"enabled":true},"items":["a","b"]}');
+  });
+
+  test('throws when template content is not valid JSON', () => {
+    expect(() => json`{ foo: "bar" }`).toThrow(SyntaxError);
+  });
+
+  test('throws when an interpolated value is not JSON-serializable', () => {
+    expect(() => json`{ "value": ${undefined} }`).toThrow(
+      '[bintastic] json template values must be JSON-serializable'
+    );
+  });
+});
+
+describe('text', () => {
+  test('dedents text template content', () => {
+    expect(text`
+      export function main() {
+        console.log('hello');
+      }
+    `).toEqual("export function main() {\n  console.log('hello');\n}");
+  });
+
+  test('preserves intentional blank lines inside content', () => {
+    expect(text`
+      # Title
+
+      Body text.
+    `).toEqual('# Title\n\nBody text.');
+  });
+
+  test('serializes interpolated values as text', () => {
+    const name = 'fixture';
+
+    expect(text`
+      export const name = '${name}';
+    `).toEqual("export const name = 'fixture';");
   });
 });
