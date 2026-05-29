@@ -75,12 +75,18 @@ teardownProject(); // removes temp directory
 **Writing fixture files:**
 
 ```ts snippet=writing-fixtures.ts
+import { json, text } from 'bintastic';
+
 project.files = {
-  'src/index.js': 'export default 42;',
-  'package.json': JSON.stringify({ name: 'test' }),
+  'src/index.js': text`
+    export default 42;
+  `,
+  'tsconfig.json': json`{ "compilerOptions": { "strict": true } }`,
 };
 await project.write();
 ```
+
+> **Note:** `package.json` is configured through the project constructor or `project.pkg`, not through `files`. fixturify-project serializes it from the project's package metadata, so a `json` value assigned to `files['package.json']` is ignored.
 
 **Running your CLI:**
 
