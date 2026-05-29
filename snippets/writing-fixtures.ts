@@ -4,6 +4,6 @@ project.files = {
   'src/index.js': text`
     export default 42;
   `,
-  'package.json': json`{ "name": "test" }`,
+  'tsconfig.json': json`{ "compilerOptions": { "strict": true } }`,
 };
 await project.write();

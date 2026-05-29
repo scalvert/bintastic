@@ -81,10 +81,12 @@ project.files = {
   'src/index.js': text`
     export default 42;
   `,
-  'package.json': json`{ "name": "test" }`,
+  'tsconfig.json': json`{ "compilerOptions": { "strict": true } }`,
 };
 await project.write();
 ```
+
+> **Note:** `package.json` is configured through the project constructor or `project.pkg`, not through `files`. fixturify-project serializes it from the project's package metadata, so a `json` value assigned to `files['package.json']` is ignored.
 
 **Running your CLI:**
 

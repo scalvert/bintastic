@@ -1,12 +1,33 @@
 /**
- * Gets the number of leading whitespace characters on a line.
+ * Gets the leading whitespace (spaces and tabs) of a line.
  * @param {string} line - The line to inspect.
- * @returns {number} The leading whitespace length.
+ * @returns {string} The leading whitespace.
  */
-function leadingWhitespaceLength(line: string): number {
-  const match = /^[\t ]*/.exec(line);
+function leadingWhitespace(line: string): string {
+  let length = 0;
 
-  return match?.[0].length ?? 0;
+  while (length < line.length && (line[length] === ' ' || line[length] === '\t')) {
+    length++;
+  }
+
+  return line.slice(0, length);
+}
+
+/**
+ * Gets the longest common prefix shared by two strings.
+ * @param {string} a - The first string.
+ * @param {string} b - The second string.
+ * @returns {string} The shared prefix.
+ */
+function sharedPrefix(a: string, b: string): string {
+  let length = 0;
+  const max = Math.min(a.length, b.length);
+
+  while (length < max && a[length] === b[length]) {
+    length++;
+  }
+
+  return a.slice(0, length);
 }
 
 /**
@@ -30,35 +51,107 @@ function trimBlankBoundaryLines(lines: string[]): string[] {
 }
 
 /**
- * Removes common indentation from text.
- * @param {string} source - The text to dedent.
- * @returns {string} The dedented text.
+ * Normalizes line endings to "\n", converting both "\r\n" pairs and lone "\r".
+ * @param {string} segment - The segment to normalize.
+ * @returns {string} The normalized segment.
  */
-function dedent(source: string): string {
-  const lines = trimBlankBoundaryLines(source.replaceAll('\r\n', '\n').split('\n'));
-  const contentLines = lines.filter((line) => line.trim() !== '');
-  const minimumIndent =
-    contentLines.length === 0
-      ? 0
-      : Math.min(...contentLines.map((line) => leadingWhitespaceLength(line)));
+function normalizeNewlines(segment: string): string {
+  return segment.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+}
 
-  return lines.map((line) => line.slice(minimumIndent)).join('\n');
+/**
+ * Determines whether a line begins a physical line of the template literal.
+ * The first line of the template owns its indentation, as does every line that
+ * follows a newline within a segment. Lines that merely continue after an
+ * interpolated value do not, so their content is emitted unchanged.
+ * @param {number} segmentIndex - The index of the segment the line is in.
+ * @param {number} lineIndex - The index of the line within the segment.
+ * @returns {boolean} Whether the line owns its indentation.
+ */
+function startsTemplateLine(segmentIndex: number, lineIndex: number): boolean {
+  return segmentIndex === 0 || lineIndex > 0;
+}
+
+/**
+ * Removes the common indentation from a template line, normalizing
+ * whitespace-only lines to empty so they render as truly blank lines.
+ * @param {string} line - The template line to strip.
+ * @param {string} indent - The common indentation prefix to remove.
+ * @returns {string} The stripped line.
+ */
+function stripTemplateIndent(line: string, indent: string): string {
+  if (line.trim() === '') {
+    return '';
+  }
+
+  return line.slice(sharedPrefix(line, indent).length);
+}
+
+/**
+ * Computes the indentation common to the template's physical lines, ignoring
+ * blank lines, lines flush to the margin, and any content contributed by
+ * interpolated values.
+ * @param {string[]} segments - The normalized template segments.
+ * @returns {string} The common leading-whitespace prefix.
+ */
+function commonTemplateIndent(segments: string[]): string {
+  let common: string | undefined;
+
+  for (const [segmentIndex, segment] of segments.entries()) {
+    for (const [lineIndex, line] of segment.split('\n').entries()) {
+      if (!startsTemplateLine(segmentIndex, lineIndex) || line.trim() === '') {
+        continue;
+      }
+
+      const indent = leadingWhitespace(line);
+
+      // A line flush to the margin doesn't constrain the common indentation;
+      // counting its empty indent would otherwise disable dedenting for the
+      // entire block (e.g. content written on the opening backtick line).
+      if (indent === '') {
+        continue;
+      }
+
+      common = common === undefined ? indent : sharedPrefix(common, indent);
+    }
+  }
+
+  return common ?? '';
 }
 
 /**
  * Creates text file content from a template string.
- * The template has leading and trailing blank lines removed, then common indentation is stripped.
+ *
+ * Leading and trailing blank lines are removed and the indentation common to
+ * the template literal is stripped. The indentation is computed only from the
+ * template text, so interpolated values are inserted verbatim: a multi-line
+ * value neither changes the detected indent nor gets re-indented. No trailing
+ * newline is added; append one explicitly if the file requires it.
  * @param {TemplateStringsArray} strings - The text template string segments.
  * @param {unknown[]} values - Values to interpolate into the text template.
  * @returns {string} The normalized text file content.
  */
 export function text(strings: TemplateStringsArray, ...values: unknown[]): string {
-  let source = strings[0] ?? '';
+  const segments = strings.map((segment) => normalizeNewlines(segment));
+  const indent = commonTemplateIndent(segments);
 
-  for (const [index, value] of values.entries()) {
-    source += String(value);
-    source += strings[index + 1] ?? '';
+  let result = '';
+
+  for (const [segmentIndex, segment] of segments.entries()) {
+    if (segmentIndex > 0) {
+      result += String(values[segmentIndex - 1]);
+    }
+
+    for (const [lineIndex, line] of segment.split('\n').entries()) {
+      if (lineIndex > 0) {
+        result += '\n';
+      }
+
+      result += startsTemplateLine(segmentIndex, lineIndex)
+        ? stripTemplateIndent(line, indent)
+        : line;
+    }
   }
 
-  return dedent(source);
+  return trimBlankBoundaryLines(result.split('\n')).join('\n');
 }
