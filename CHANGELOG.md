@@ -7,6 +7,18 @@
 
 
 
+## v4.1.0 (2026-05-29)
+
+#### :rocket: Enhancement
+
+- [#301](https://github.com/scalvert/bintastic/pull/301) feat: add fixture template helpers ([@scalvert](https://github.com/scalvert))
+
+#### Committers: 1
+
+- Steve Calvert ([@scalvert](https://github.com/scalvert))
+
+
+
 ## v4.0.2 (2026-03-08)
 
 #### :bug: Bug Fix
