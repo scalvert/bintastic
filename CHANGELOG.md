@@ -7,6 +7,18 @@
 
 
 
+## v4.1.1 (2026-06-07)
+
+#### :house: Internal
+
+- [#304](https://github.com/scalvert/bintastic/pull/304) chore(ci): split Dependabot version updates by dependency type ([@scalvert](https://github.com/scalvert))
+
+#### Committers: 1
+
+- Steve Calvert ([@scalvert](https://github.com/scalvert))
+
+
+
 ## v4.1.0 (2026-05-29)
 
 #### :rocket: Enhancement
