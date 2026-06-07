@@ -1,3 +1,8 @@
+# Security-severity weighting for dev vs production dependencies is handled by
+# Dependabot auto-triage rules (repo Settings -> Code security -> Dependabot),
+# which dependabot.yml cannot express. This file separates version-update PRs by
+# dependency type so production (runtime) bumps that reach consumers get focused
+# review, apart from dev-tooling noise.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -13,29 +18,39 @@ updates:
     labels:
       - dependencies
     groups:
-      # Group all minor and patch updates into a single PR
+      # Production (runtime) dependencies reach consumers: isolate every update
+      # into its own PR for focused review.
+      production:
+        dependency-type: production
+        patterns:
+          - '*'
+      # Dev-tooling minor and patch updates, grouped to reduce noise.
       minor-and-patch:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - minor
           - patch
-      # Group eslint-related packages
+      # eslint-related dev tooling (major bumps)
       eslint:
+        dependency-type: development
         patterns:
           - 'eslint*'
           - '@typescript-eslint/*'
         update-types:
           - major
-      # Group test-related packages
+      # test-related dev tooling (major bumps)
       testing:
+        dependency-type: development
         patterns:
           - 'vitest'
           - 'vite'
         update-types:
           - major
-      # Group build/release tooling
+      # build/release dev tooling (major bumps)
       build-tools:
+        dependency-type: development
         patterns:
           - 'release-it'
           - '@release-it-plugins/*'
