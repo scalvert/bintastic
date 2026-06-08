@@ -100,5 +100,8 @@
       "release": true,
       "tokenRef": "GITHUB_AUTH"
     }
+  },
+  "overrides": {
+    "tmp": "^0.2.7"
   }
 }
