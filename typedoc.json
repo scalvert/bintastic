@@ -1,10 +1,19 @@
 {
   "$schema": "https://typedoc.org/schema.json",
+  "plugin": ["typedoc-plugin-markdown", "typedoc-vitepress-theme"],
   "entryPoints": ["./src/index.ts"],
-  "out": "./docs",
+  "out": "./docs/api",
+  "docsRoot": "./docs",
   "name": "bintastic",
   "readme": "none",
+  "entryFileName": "index",
   "excludePrivate": true,
   "excludeInternal": true,
-  "githubPages": true
+  "excludeExternals": true,
+  "sidebar": {
+    "autoConfiguration": true,
+    "format": "vitepress",
+    "collapsed": true,
+    "pretty": false
+  }
 }

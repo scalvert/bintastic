@@ -1,3 +1,6 @@
 CHANGELOG.md
 EVAL-CHECKLIST.md
 .worktrees/
+docs/api/
+docs/.vitepress/cache/
+docs/.vitepress/dist/

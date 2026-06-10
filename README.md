@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="./bintastic.png" alt="bintastic" width="400" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/public/bintastic-banner-dark.png" />
+    <img src="./docs/public/bintastic-banner.png" alt="bintastic" width="480" />
+  </picture>
 
 <p align="center">
   <img src="https://github.com/scalvert/bintastic/workflows/CI%20Build/badge.svg" alt="CI Build" />
@@ -37,8 +40,7 @@ describe('my-cli', () => {
   });
 
   test('processes files', async () => {
-    project.files = { 'input.txt': 'hello' };
-    await project.write();
+    await project.write({ 'input.txt': 'hello' });
 
     const result = await runBin('input.txt');
 
@@ -54,96 +56,11 @@ describe('my-cli', () => {
 npm add bintastic --save-dev
 ```
 
-## Usage
+## Documentation
 
-`createBintastic` returns helpers for setting up projects, running your CLI, and cleaning up:
+Full documentation lives at **[scalvert.github.io/bintastic](https://scalvert.github.io/bintastic/)**:
 
-```ts snippet=create-bintastic.ts
-const { setupProject, teardownProject, runBin } = createBintastic({
-  importMeta: import.meta,
-  binPath: './bin/my-cli.js', // resolved relative to this module
-  staticArgs: ['--verbose'], // args passed to every invocation
-});
-```
-
-**Resolving `binPath`:**
-
-Pass `importMeta: import.meta` and a `binPath` relative to the importing module—bintastic resolves it with `fileURLToPath(new URL(binPath, importMeta.url))`. This is the recommended form. If `binPath` is a function, its returned path is resolved the same way.
-
-Without `importMeta`, `binPath` must be an absolute path that you pre-resolve yourself:
-
-```ts snippet=legacy-bin-path.ts
-import { fileURLToPath } from 'node:url';
-
-// Without `importMeta`, `binPath` must be an absolute path. Pre-resolve it yourself:
-const { setupProject, teardownProject, runBin } = createBintastic({
-  binPath: fileURLToPath(new URL('./bin/my-cli.js', import.meta.url)),
-});
-```
-
-**Setup and teardown:**
-
-```ts snippet=setup-teardown.ts
-const project = await setupProject(); // creates temp directory
-// ... run tests ...
-teardownProject(); // removes temp directory
-```
-
-**Writing fixture files:**
-
-```ts snippet=writing-fixtures.ts
-import { json, text } from 'bintastic';
-
-project.files = {
-  'src/index.js': text`
-    export default 42;
-  `,
-  'tsconfig.json': json`{ "compilerOptions": { "strict": true } }`,
-};
-await project.write();
-```
-
-> **Note:** `package.json` is configured through the project constructor or `project.pkg`, not through `files`. fixturify-project serializes it from the project's package metadata, so a `json` value assigned to `files['package.json']` is ignored.
-
-**Running your CLI:**
-
-```ts snippet=running-cli.ts
-const result = await runBin('--flag', 'arg');
-
-result.exitCode; // number
-result.stdout; // string
-result.stderr; // string
-```
-
-## Debugging
-
-Set `BINTASTIC_DEBUG` to enable the Node inspector and preserve fixtures for inspection:
-
-```bash
-BINTASTIC_DEBUG=attach npm test  # attach debugger
-BINTASTIC_DEBUG=break npm test   # break on first line
-```
-
-Or use `runBinDebug()` programmatically:
-
-```ts snippet=run-bin-debug.ts
-await runBinDebug('--flag'); // runs with --inspect
-```
-
-For VS Code, add to `.vscode/launch.json`:
-
-```jsonc
-{
-  "name": "Debug Tests",
-  "type": "node",
-  "request": "launch",
-  "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/vitest",
-  "runtimeArgs": ["run"],
-  "autoAttachChildProcesses": true,
-  "console": "integratedTerminal",
-}
-```
-
-## API
-
-See the [full API documentation](https://scalvert.github.io/bintastic/).
+- **[Getting Started](https://scalvert.github.io/bintastic/guide/getting-started)** — what bintastic is and the quick-start example
+- **[Usage](https://scalvert.github.io/bintastic/guide/usage)** — `createBintastic` options, `binPath` resolution, writing fixture files, and reading results
+- **[Debugging](https://scalvert.github.io/bintastic/guide/debugging)** — `BINTASTIC_DEBUG` modes, `runBinDebug`, and the VS Code launch configuration
+- **[API Reference](https://scalvert.github.io/bintastic/api/)** — generated type documentation

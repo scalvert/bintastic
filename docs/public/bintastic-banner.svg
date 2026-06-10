@@ -1,0 +1,14 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 202 137 L 236 176 L 202 215" fill="none" stroke="#9AA2AF" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M 383 113 H 494.8 A 18 18 0 0 1 512.8 131 V 221 A 18 18 0 0 1 494.8 239 H 294 A 18 18 0 0 1 276 221 V 131 A 18 18 0 0 1 294 113" fill="none" stroke="#13A89A" stroke-width="5" stroke-dasharray="16 12"/>
+
+  <text x="337" y="120" font-family="JetBrains Mono" font-weight="500" font-size="22" fill="#13A89A" text-anchor="middle">tmp/</text>
+
+  <text x="290" y="218" font-family="JetBrains Mono" font-weight="800" font-size="116" fill="#13A89A">bin</text>
+  <text x="526.8" y="218" font-family="JetBrains Mono" font-weight="800" font-size="116" fill="#222733">tastic</text>
+
+  <rect x="964.4" y="126" width="44" height="94" rx="7" fill="#FF5D45"/>
+
+  <text x="600" y="312" font-family="JetBrains Mono" font-weight="500" font-size="33" fill="#5A6270" text-anchor="middle">Exercise your binaries in synthetic environments.</text>
+</svg>

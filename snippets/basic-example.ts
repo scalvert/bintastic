@@ -17,8 +17,7 @@ describe('my-cli', () => {
   });
 
   test('processes files', async () => {
-    project.files = { 'input.txt': 'hello' };
-    await project.write();
+    await project.write({ 'input.txt': 'hello' });
 
     const result = await runBin('input.txt');
 

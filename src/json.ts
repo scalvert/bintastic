@@ -40,6 +40,16 @@ function stringifyTemplateValue(value: unknown): string {
  * from the project's `pkg`, not from `files`, so assigning `json` content to
  * `files['package.json']` has no effect. Configure it via the project
  * constructor or `project.pkg` instead.
+ * @example
+ * ```ts
+ * import { json } from 'bintastic';
+ *
+ * project.files = {
+ *   'tsconfig.json': json`{ "compilerOptions": { "strict": true } }`,
+ *   'data.json': json`{ "count": ${42}, "enabled": ${true} }`,
+ * };
+ * await project.write();
+ * ```
  * @param {TemplateStringsArray} strings - The JSON template string segments.
  * @param {unknown[]} values - Values to serialize into the JSON template.
  * @returns {string} The normalized JSON file content.

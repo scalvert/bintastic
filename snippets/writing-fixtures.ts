@@ -1,9 +1,8 @@
 import { json, text } from 'bintastic';
 
-project.files = {
+await project.write({
   'src/index.js': text`
     export default 42;
   `,
   'tsconfig.json': json`{ "compilerOptions": { "strict": true } }`,
-};
-await project.write();
+});
