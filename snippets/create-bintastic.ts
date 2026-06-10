@@ -1,4 +1,5 @@
 const { setupProject, teardownProject, runBin } = createBintastic({
-  binPath: './bin/my-cli.js',
+  importMeta: import.meta,
+  binPath: './bin/my-cli.js', // resolved relative to this module
   staticArgs: ['--verbose'], // args passed to every invocation
 });

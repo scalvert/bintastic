@@ -1,11 +1,21 @@
+import { fileURLToPath } from 'node:url';
 import { execaNode, type Options, type ResultPromise } from 'execa';
 import BintasticProject from './project';
+
 /**
- * Options for configuring bintastic.
+ * Options shared by every way of configuring bintastic.
  */
-export interface BintasticOptions<TProject> {
+interface BintasticOptionsBase<TProject> {
   /**
-   * The absolute path to the bin to invoke
+   * The path to the bin to invoke.
+   *
+   * When {@link ImportMetaBintasticOptions.importMeta | importMeta} is provided, this is treated as
+   * a path relative to the importing module and resolved via
+   * `fileURLToPath(new URL(binPath, importMeta.url))`. Otherwise it must be an
+   * absolute path (typically pre-resolved by the caller).
+   *
+   * May also be a function that receives the project and returns the path. The
+   * returned value is resolved using the same rule.
    */
   binPath: string | ((project: TProject) => string);
   /**
@@ -17,6 +27,37 @@ export interface BintasticOptions<TProject> {
    */
   createProject?: () => Promise<TProject>;
 }
+
+/**
+ * Options where `binPath` is an already-resolved absolute path.
+ */
+export interface ResolvedBintasticOptions<TProject> extends BintasticOptionsBase<TProject> {
+  /**
+   * Must be absent. Provide {@link ImportMetaBintasticOptions} to resolve a relative `binPath`.
+   */
+  importMeta?: undefined;
+}
+
+/**
+ * Options where `binPath` is relative to the importing module, resolved against `importMeta.url`.
+ */
+export interface ImportMetaBintasticOptions<TProject> extends BintasticOptionsBase<TProject> {
+  /**
+   * The `import.meta` of the module configuring bintastic. Used to resolve a
+   * relative `binPath` to an absolute path.
+   */
+  importMeta: ImportMeta;
+}
+
+/**
+ * Options for configuring bintastic.
+ *
+ * Either provide an absolute `binPath` ({@link ResolvedBintasticOptions}) or pass
+ * `importMeta` alongside a relative `binPath` ({@link ImportMetaBintasticOptions}).
+ */
+export type BintasticOptions<TProject> =
+  | ResolvedBintasticOptions<TProject>
+  | ImportMetaBintasticOptions<TProject>;
 
 interface RunOptions {
   /**
@@ -131,6 +172,23 @@ export function createBintastic<TProject extends BintasticProject>(
   } as BintasticOptions<TProject> & { staticArgs: string[] };
 
   /**
+   * Resolves the configured binPath to an absolute path. Calls binPath when it is
+   * a function, then resolves the result relative to importMeta.url when provided.
+   * @param {TProject} forProject - The active project, passed to a binPath function.
+   * @returns {string} The absolute path to the bin script.
+   */
+  function resolveBinPath(forProject: TProject): string {
+    const rawBinPath =
+      typeof mergedOptions.binPath === 'function'
+        ? mergedOptions.binPath(forProject)
+        : mergedOptions.binPath;
+
+    return mergedOptions.importMeta
+      ? fileURLToPath(new URL(rawBinPath, mergedOptions.importMeta.url))
+      : rawBinPath;
+  }
+
+  /**
    * Shared execution body for runBin and runBinDebug. Parses debug env, sets inspector
    * flags, and updates _preserveFixtures so teardownProject sees debug state correctly.
    * @param {RunOptions} parsedArgs - Already-parsed arguments and execa options.
@@ -169,11 +227,7 @@ export function createBintastic<TProject extends BintasticProject>(
   function runBin(...args: RunBinArgs): ResultPromise {
     if (!project) throw new Error('[bintastic] setupProject() must be called before runBin()');
     const parsedArgs = parseArgs(args);
-    const binPath =
-      typeof mergedOptions.binPath === 'function'
-        ? mergedOptions.binPath(project)
-        : mergedOptions.binPath;
-    return _runBinInternal(parsedArgs, binPath);
+    return _runBinInternal(parsedArgs, resolveBinPath(project));
   }
 
   /**
@@ -191,11 +245,7 @@ export function createBintastic<TProject extends BintasticProject>(
         BINTASTIC_DEBUG: debugEnv,
       },
     };
-    const binPath =
-      typeof mergedOptions.binPath === 'function'
-        ? mergedOptions.binPath(project)
-        : mergedOptions.binPath;
-    return _runBinInternal(parsedArgs, binPath);
+    return _runBinInternal(parsedArgs, resolveBinPath(project));
   }
 
   /**
