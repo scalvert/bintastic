@@ -32,7 +32,6 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --clean",
-    "docs": "typedoc",
     "docs:check": "markdown-code check",
     "docs:sync": "markdown-code sync",
     "format": "prettier --write .",
@@ -42,7 +41,11 @@
     "test": "npm run lint && npm run test:vitest",
     "test:vitest": "vitest run",
     "test:watch": "vitest",
-    "watch": "npm run build -- --watch src"
+    "watch": "npm run build -- --watch src",
+    "docs:api": "typedoc",
+    "docs:dev": "npm run docs:api && vitepress dev docs",
+    "docs:build": "npm run docs:api && vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "files": [
     "dist"
@@ -74,9 +77,12 @@
     "release-it": "^19.2.2",
     "tsup": "^8.4.0",
     "type-fest": "^5.3.1",
-    "typedoc": "^0.28.15",
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-markdown": "^4.12.0",
+    "typedoc-vitepress-theme": "^1.1.3",
     "typescript": "^6.0.3",
     "vite": "^8.0.14",
+    "vitepress": "^1.6.4",
     "vitest": "^4.0.16"
   },
   "engines": {

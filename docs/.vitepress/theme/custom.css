@@ -1,0 +1,49 @@
+:root {
+  --vp-c-brand-1: #0e8c7f;
+  --vp-c-brand-2: #13a89a;
+  --vp-c-brand-3: #13a89a;
+  --vp-c-brand-soft: rgba(19, 168, 154, 0.14);
+}
+
+.dark {
+  --vp-c-brand-1: #2dd4bf;
+  --vp-c-brand-2: #19bfae;
+  --vp-c-brand-3: #13a89a;
+  --vp-c-brand-soft: rgba(45, 212, 191, 0.16);
+}
+
+@media (min-width: 960px) {
+  .VPHero.has-image .container {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .VPHero.has-image .main {
+    order: 2;
+    width: 100%;
+    max-width: none !important;
+  }
+
+  .VPHero .image {
+    order: 1;
+    margin: 0;
+  }
+
+  .VPHero .image-container {
+    width: auto;
+    height: auto;
+    justify-content: center;
+    transform: none;
+  }
+
+  .VPHero .image-src {
+    position: static;
+    transform: none;
+    max-width: 460px;
+  }
+
+  .VPHero.has-image .actions {
+    justify-content: center !important;
+  }
+}

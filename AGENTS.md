@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## CRITICAL: Do Not Release
 
@@ -10,7 +10,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Modify version numbers in package.json for release purposes
 - Amend or modify release commits
 - Create release tags
-- Hand-edit `CHANGELOG.md` — it is generated entirely by release-it (lerna-changelog) from merged PR titles. Never add headings, sections, or entries to it, not even an "Unreleased" section.
 
 The maintainer handles all releases manually.
 

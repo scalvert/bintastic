@@ -127,6 +127,17 @@ function commonTemplateIndent(segments: string[]): string {
  * template text, so interpolated values are inserted verbatim: a multi-line
  * value neither changes the detected indent nor gets re-indented. No trailing
  * newline is added; append one explicitly if the file requires it.
+ * @example
+ * ```ts
+ * import { text } from 'bintastic';
+ *
+ * project.files = {
+ *   'src/index.js': text`
+ *     export default 42;
+ *   `,
+ * };
+ * await project.write();
+ * ```
  * @param {TemplateStringsArray} strings - The text template string segments.
  * @param {unknown[]} values - Values to interpolate into the text template.
  * @returns {string} The normalized text file content.
