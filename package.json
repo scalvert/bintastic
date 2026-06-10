@@ -70,7 +70,7 @@
     "eslint-plugin-jsdoc": "^63.0.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^5.2.6",
-    "eslint-plugin-unicorn": "^64.0.0",
+    "eslint-plugin-unicorn": "^65.0.1",
     "fixturify": "^3.0.0",
     "markdown-code": "^1.0.0",
     "prettier": "^3.5.3",
