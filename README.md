@@ -22,7 +22,8 @@ import { createBintastic } from 'bintastic';
 
 describe('my-cli', () => {
   const { setupProject, teardownProject, runBin } = createBintastic({
-    binPath: './bin/my-cli.js',
+    importMeta: import.meta,
+    binPath: './bin/my-cli.js', // resolved relative to this test module
   });
 
   let project;
@@ -59,8 +60,24 @@ npm add bintastic --save-dev
 
 ```ts snippet=create-bintastic.ts
 const { setupProject, teardownProject, runBin } = createBintastic({
-  binPath: './bin/my-cli.js',
+  importMeta: import.meta,
+  binPath: './bin/my-cli.js', // resolved relative to this module
   staticArgs: ['--verbose'], // args passed to every invocation
+});
+```
+
+**Resolving `binPath`:**
+
+Pass `importMeta: import.meta` and a `binPath` relative to the importing module—bintastic resolves it with `fileURLToPath(new URL(binPath, importMeta.url))`. This is the recommended form. If `binPath` is a function, its returned path is resolved the same way.
+
+Without `importMeta`, `binPath` must be an absolute path that you pre-resolve yourself:
+
+```ts snippet=legacy-bin-path.ts
+import { fileURLToPath } from 'node:url';
+
+// Without `importMeta`, `binPath` must be an absolute path. Pre-resolve it yourself:
+const { setupProject, teardownProject, runBin } = createBintastic({
+  binPath: fileURLToPath(new URL('./bin/my-cli.js', import.meta.url)),
 });
 ```
 

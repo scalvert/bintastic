@@ -62,9 +62,10 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
-  test('runBin can run the configured bin script', async () => {
+  test('runBin resolves a relative binPath against importMeta.url', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
-      binPath: fileURLToPath(new URL('fixtures/fake-bin.js', import.meta.url)),
+      importMeta: import.meta,
+      binPath: 'fixtures/fake-bin.js',
     });
 
     const project = await setupProject();
@@ -78,12 +79,29 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
-  test('runBin can run the configured bin script dynamically', async () => {
+  test('runBin resolves a function binPath against importMeta.url', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
+      importMeta: import.meta,
       binPath: (p) => {
         expect(p).toEqual(project);
-        return fileURLToPath(new URL('fixtures/fake-bin.js', import.meta.url));
+        return 'fixtures/fake-bin.js';
       },
+    });
+
+    const project = await setupProject();
+
+    const result = await runBin();
+
+    expect(result.stdout).toMatchInlineSnapshot('"I am a bin who takes args []"');
+
+    teardownProject();
+
+    expect(existsSync(project.baseDir)).toEqual(false);
+  });
+
+  test('runBin accepts a pre-resolved absolute binPath (legacy)', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/fake-bin.js', import.meta.url)),
     });
 
     const project = await setupProject();
@@ -99,7 +117,8 @@ describe('createBintastic', () => {
 
   test('runBin can run the configured bin script with static arguments', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
-      binPath: fileURLToPath(new URL('fixtures/fake-bin.js', import.meta.url)),
+      importMeta: import.meta,
+      binPath: 'fixtures/fake-bin.js',
       staticArgs: ['--static', 'true'],
     });
 
@@ -118,7 +137,8 @@ describe('createBintastic', () => {
 
   test('runBin can run the configured bin script with arguments', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
-      binPath: fileURLToPath(new URL('fixtures/fake-bin.js', import.meta.url)),
+      importMeta: import.meta,
+      binPath: 'fixtures/fake-bin.js',
     });
 
     const project = await setupProject();
@@ -136,7 +156,8 @@ describe('createBintastic', () => {
 
   test('runBin can run the configured bin script with arguments and execa options', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
-      binPath: fileURLToPath(new URL('fixtures/fake-bin-with-env.js', import.meta.url)),
+      importMeta: import.meta,
+      binPath: 'fixtures/fake-bin-with-env.js',
     });
 
     const project = await setupProject();

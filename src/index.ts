@@ -1,6 +1,8 @@
 export {
   createBintastic,
   BintasticOptions,
+  ResolvedBintasticOptions,
+  ImportMetaBintasticOptions,
   CreateBintasticResult,
   RunBin,
 } from './create-bintastic';

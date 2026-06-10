@@ -2,7 +2,8 @@ import { createBintastic } from 'bintastic';
 
 describe('my-cli', () => {
   const { setupProject, teardownProject, runBin } = createBintastic({
-    binPath: './bin/my-cli.js',
+    importMeta: import.meta,
+    binPath: './bin/my-cli.js', // resolved relative to this test module
   });
 
   let project;
