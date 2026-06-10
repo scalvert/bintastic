@@ -7,6 +7,22 @@
 
 
 
+## v4.2.0 (2026-06-10)
+
+#### :rocket: Enhancement
+
+- [#308](https://github.com/scalvert/bintastic/pull/308) feat: resolve binPath relative to importMeta.url ([@scalvert](https://github.com/scalvert))
+
+#### :bug: Bug Fix
+
+- [#307](https://github.com/scalvert/bintastic/pull/307) fix(deps): override tmp to ^0.2.7 to patch path traversal advisory ([@scalvert](https://github.com/scalvert))
+
+#### Committers: 1
+
+- Steve Calvert ([@scalvert](https://github.com/scalvert))
+
+
+
 ## v4.1.1 (2026-06-07)
 
 #### :house: Internal
