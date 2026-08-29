@@ -76,6 +76,14 @@ export default [
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/no-process-exit': 'off',
       'unicorn/import-style': 'off',
+      'unicorn/consistent-boolean-name': 'off',
+      'unicorn/consistent-conditional-object-spread': 'off',
+      'unicorn/name-replacements': 'off',
+      'unicorn/no-break-in-nested-loop': 'off',
+      'unicorn/no-useless-else': 'off',
+      'unicorn/prefer-global-number-constants': 'off',
+      'unicorn/prefer-https': 'off',
+      'unicorn/prefer-includes-over-repeated-comparisons': 'off',
       // Add these rules that were previously from node plugin
       'no-process-exit': 'off',
       'no-unpublished-import': [

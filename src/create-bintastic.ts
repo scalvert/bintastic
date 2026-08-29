@@ -57,8 +57,7 @@ export interface ImportMetaBintasticOptions<TProject> extends BintasticOptionsBa
  * `importMeta` alongside a relative `binPath` ({@link ImportMetaBintasticOptions}).
  */
 export type BintasticOptions<TProject> =
-  | ResolvedBintasticOptions<TProject>
-  | ImportMetaBintasticOptions<TProject>;
+  ResolvedBintasticOptions<TProject> | ImportMetaBintasticOptions<TProject>;
 
 interface RunOptions {
   /**

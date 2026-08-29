@@ -52,7 +52,7 @@
     "dist"
   ],
   "dependencies": {
-    "execa": "^9.6.1",
+    "execa": "^10.0.0",
     "fixturify": "^3.0.0",
     "fixturify-project": "^7.1.3"
   },
