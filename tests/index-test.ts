@@ -178,6 +178,23 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
+  test('runBin preserves non-inspector parent Node options', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
+    });
+
+    await setupProject();
+    process.execArgv.push('--trace-warnings');
+
+    try {
+      const result = await runBin({});
+      expect(JSON.parse(result.stdout)).toContain('--trace-warnings');
+    } finally {
+      process.execArgv.pop();
+      teardownProject();
+    }
+  });
+
   test('BINTASTIC_DEBUG env toggles inspector flags passed to child', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
       binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),

@@ -199,7 +199,7 @@ export function createBintastic<TProject extends BintasticProject>(
     const optionsEnv = parsedArgs.execaOptions.env;
     const debugEnv = optionsEnv?.BINTASTIC_DEBUG ?? process.env.BINTASTIC_DEBUG;
 
-    const nodeOptions: string[] = [];
+    const nodeOptions = process.execArgv.filter((option) => !option.startsWith('--inspect'));
     if (debugEnv && debugEnv !== '0' && debugEnv.toLowerCase() !== 'false') {
       _preserveFixtures = true;
       if (debugEnv.toLowerCase() === 'break') {
