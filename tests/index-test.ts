@@ -48,6 +48,17 @@ describe('createBintastic', () => {
     expect(project).toBeInstanceOf(FakeProject);
   });
 
+  test('setupProject should accept a synchronous custom project factory', async () => {
+    const { setupProject } = createBintastic({
+      binPath: './foo',
+      createProject: () => new FakeProject(),
+    });
+
+    const project = await setupProject();
+
+    expect(project).toBeInstanceOf(FakeProject);
+  });
+
   test('teardownProject should result in the project being disposed of', async () => {
     const { setupProject, teardownProject } = createBintastic({
       binPath: './foo',
@@ -60,6 +71,20 @@ describe('createBintastic', () => {
     teardownProject();
 
     expect(existsSync(project.baseDir)).toEqual(false);
+  });
+
+  test('runBin rejects a relative binPath without importMeta', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      binPath: './fixtures/fake-bin.js',
+    });
+
+    await setupProject();
+
+    expect(() => runBin()).toThrow(
+      '[bintastic] binPath must be an absolute path when importMeta is not provided'
+    );
+
+    teardownProject();
   });
 
   test('runBin resolves a relative binPath against importMeta.url', async () => {
@@ -135,6 +160,29 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
+  test('runBin executes from the fixture project and reads nested fixture files', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      importMeta: import.meta,
+      binPath: 'fixtures/read-fixture.mjs',
+    });
+
+    const project = await setupProject();
+    project.files = {
+      nested: {
+        'input.txt': 'fixture content',
+      },
+    };
+    await project.write();
+
+    const result = await runBin();
+    expect(JSON.parse(result.stdout)).toEqual({
+      cwd: project.baseDir,
+      content: 'fixture content',
+    });
+
+    teardownProject();
+  });
+
   test('runBin can run the configured bin script with arguments', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
       importMeta: import.meta,
@@ -176,6 +224,23 @@ describe('createBintastic', () => {
     teardownProject();
 
     expect(existsSync(project.baseDir)).toEqual(false);
+  });
+
+  test('runBin preserves non-inspector parent Node options', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
+    });
+
+    await setupProject();
+    process.execArgv.push('--trace-warnings');
+
+    try {
+      const result = await runBin({});
+      expect(JSON.parse(result.stdout)).toContain('--trace-warnings');
+    } finally {
+      process.execArgv.pop();
+      teardownProject();
+    }
   });
 
   test('BINTASTIC_DEBUG env toggles inspector flags passed to child', async () => {
@@ -231,6 +296,29 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
+  test('runBinDebug overrides disabled env and caller nodeOptions', async () => {
+    const { setupProject, teardownProject, runBinDebug } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
+    });
+
+    const project = await setupProject();
+    const previousDebug = process.env.BINTASTIC_DEBUG;
+
+    try {
+      process.env.BINTASTIC_DEBUG = 'false';
+      const result = await runBinDebug({ nodeOptions: [] });
+      const execArgv = JSON.parse(result.stdout);
+
+      expect(execArgv.find((a: string) => a.startsWith('--inspect'))).toBeTypeOf('string');
+      teardownProject();
+      expect(existsSync(project.baseDir)).toEqual(true);
+    } finally {
+      if (previousDebug === undefined) delete process.env.BINTASTIC_DEBUG;
+      else process.env.BINTASTIC_DEBUG = previousDebug;
+      project.dispose();
+    }
+  });
+
   test('runBinDebug preserves tmp dir on teardown without process.env mutation (CHK-005)', async () => {
     const { setupProject, teardownProject, runBinDebug } = createBintastic({
       binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
@@ -270,6 +358,34 @@ describe('createBintastic', () => {
     teardownProject();
   });
 
+  test('teardownProject invalidates the disposed project', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      binPath: './foo',
+    });
+
+    await setupProject();
+    teardownProject();
+
+    expect(() => runBin()).toThrow('[bintastic] setupProject() must be called before runBin()');
+  });
+
+  test('debug preservation does not leak to a replacement project', async () => {
+    const { setupProject, teardownProject, runBinDebug } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
+    });
+
+    const preservedProject = await setupProject();
+    await runBinDebug({});
+    teardownProject();
+    expect(existsSync(preservedProject.baseDir)).toEqual(true);
+
+    const replacementProject = await setupProject();
+    teardownProject();
+
+    expect(existsSync(replacementProject.baseDir)).toEqual(false);
+    preservedProject.dispose();
+  });
+
   test('BINTASTIC_DEBUG preserves tmp dir on teardown', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
       binPath: fileURLToPath(new URL('fixtures/fake-bin.js', import.meta.url)),
@@ -291,6 +407,26 @@ describe('createBintastic', () => {
     }
 
     expect(existsSync(project.baseDir)).toEqual(false);
+  });
+});
+
+describe('BintasticProject', () => {
+  test('restores the cwd that was active before chdir', async () => {
+    const originalCwd = process.cwd();
+    const callerProject = new BintasticProject();
+    const targetProject = new BintasticProject();
+
+    try {
+      process.chdir(callerProject.baseDir);
+      await targetProject.chdir();
+      await targetProject.chdir();
+      targetProject.dispose();
+
+      expect(process.cwd()).toEqual(callerProject.baseDir);
+    } finally {
+      callerProject.dispose();
+      process.chdir(originalCwd);
+    }
   });
 });
 
@@ -328,6 +464,24 @@ describe('json', () => {
     expect(() => json`{ "value": ${{ count: Number.NaN }} }`).toThrow(
       '[bintastic] json template values must be JSON-serializable'
     );
+  });
+
+  test('throws when unsupported values are nested inside an interpolated value', () => {
+    const omitted = Reflect.get({}, 'missing');
+    const unsupportedValues = [
+      { nested: omitted },
+      { nested: () => {} },
+      { nested: Symbol('unsupported') },
+      [omitted],
+      [() => {}],
+      [Symbol('unsupported')],
+    ];
+
+    for (const value of unsupportedValues) {
+      expect(() => json`{ "value": ${value} }`).toThrow(
+        '[bintastic] json template values must be JSON-serializable'
+      );
+    }
   });
 
   test('throws a branded error when an interpolated value is a BigInt', () => {
