@@ -330,6 +330,24 @@ describe('json', () => {
     );
   });
 
+  test('throws when unsupported values are nested inside an interpolated value', () => {
+    const omitted = Reflect.get({}, 'missing');
+    const unsupportedValues = [
+      { nested: omitted },
+      { nested: () => {} },
+      { nested: Symbol('unsupported') },
+      [omitted],
+      [() => {}],
+      [Symbol('unsupported')],
+    ];
+
+    for (const value of unsupportedValues) {
+      expect(() => json`{ "value": ${value} }`).toThrow(
+        '[bintastic] json template values must be JSON-serializable'
+      );
+    }
+  });
+
   test('throws a branded error when an interpolated value is a BigInt', () => {
     expect(() => json`{ "value": ${10n} }`).toThrow(
       '[bintastic] json template values must be JSON-serializable'
