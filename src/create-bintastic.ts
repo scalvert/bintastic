@@ -102,6 +102,24 @@ export interface RunBin {
 type RunBinArgs = (string | Options)[];
 
 /**
+ * Normalizes the debug environment value into a supported debug mode.
+ * @param {unknown} value - The configured debug value.
+ * @returns {'attach' | 'break' | undefined} The normalized debug mode.
+ */
+function getDebugMode(value: unknown): 'attach' | 'break' | undefined {
+  if (value === undefined || value === false || value === 0) {
+    return undefined;
+  }
+
+  const normalized = String(value).toLowerCase();
+  if (normalized === '0' || normalized === 'false') {
+    return undefined;
+  }
+
+  return normalized === 'break' ? 'break' : 'attach';
+}
+
+/**
  * The result returned by createBintastic.
  */
 export interface CreateBintasticResult<TProject extends BintasticProject> {
@@ -193,20 +211,26 @@ export function createBintastic<TProject extends BintasticProject>(
    * flags, and updates _preserveFixtures so teardownProject sees debug state correctly.
    * @param {RunOptions} parsedArgs - Already-parsed arguments and execa options.
    * @param {string} binPath - Resolved path to the bin script.
+   * @param {'attach' | 'break'} [forcedDebugMode] - Optional debug mode forced by runBinDebug.
    * @returns {ResultPromise} An instance of execa's result promise.
    */
-  function _runBinInternal(parsedArgs: RunOptions, binPath: string): ResultPromise {
+  function _runBinInternal(
+    parsedArgs: RunOptions,
+    binPath: string,
+    forcedDebugMode?: 'attach' | 'break'
+  ): ResultPromise {
     const optionsEnv = parsedArgs.execaOptions.env;
-    const debugEnv = optionsEnv?.BINTASTIC_DEBUG ?? process.env.BINTASTIC_DEBUG;
+    const configuredDebugMode = optionsEnv?.BINTASTIC_DEBUG ?? process.env.BINTASTIC_DEBUG;
+    const debugMode = forcedDebugMode ?? getDebugMode(configuredDebugMode);
+    const nodeOptions =
+      debugMode === 'break'
+        ? ['--inspect-brk=0']
+        : debugMode === 'attach'
+          ? ['--inspect=0']
+          : undefined;
 
-    const nodeOptions: string[] = [];
-    if (debugEnv && debugEnv !== '0' && debugEnv.toLowerCase() !== 'false') {
+    if (debugMode) {
       _preserveFixtures = true;
-      if (debugEnv.toLowerCase() === 'break') {
-        nodeOptions.push('--inspect-brk=0');
-      } else {
-        nodeOptions.push('--inspect=0');
-      }
       console.log(`[bintastic] Debugging enabled. Fixture: ${project.baseDir}`);
     }
 
@@ -215,8 +239,8 @@ export function createBintastic<TProject extends BintasticProject>(
     return execaNode(binPath, [...mergedOptions.staticArgs, ...parsedArgs.args], {
       reject: false,
       cwd: resolvedCwd,
-      nodeOptions,
       ...parsedArgs.execaOptions,
+      ...(nodeOptions ? { nodeOptions } : {}),
     });
   }
 
@@ -237,15 +261,16 @@ export function createBintastic<TProject extends BintasticProject>(
   function runBinDebug(...args: RunBinArgs): ResultPromise {
     if (!project) throw new Error('[bintastic] setupProject() must be called before runBinDebug()');
     const parsedArgs = parseArgs(args);
-    const debugEnv = process.env.BINTASTIC_DEBUG || 'attach';
+    const debugMode =
+      String(process.env.BINTASTIC_DEBUG).toLowerCase() === 'break' ? 'break' : 'attach';
     parsedArgs.execaOptions = {
       ...parsedArgs.execaOptions,
       env: {
         ...parsedArgs.execaOptions.env,
-        BINTASTIC_DEBUG: debugEnv,
+        BINTASTIC_DEBUG: debugMode,
       },
     };
-    return _runBinInternal(parsedArgs, resolveBinPath(project));
+    return _runBinInternal(parsedArgs, resolveBinPath(project), debugMode);
   }
 
   /**

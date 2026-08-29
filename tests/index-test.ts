@@ -231,6 +231,29 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
+  test('runBinDebug overrides disabled env and caller nodeOptions', async () => {
+    const { setupProject, teardownProject, runBinDebug } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
+    });
+
+    const project = await setupProject();
+    const previousDebug = process.env.BINTASTIC_DEBUG;
+
+    try {
+      process.env.BINTASTIC_DEBUG = 'false';
+      const result = await runBinDebug({ nodeOptions: [] });
+      const execArgv = JSON.parse(result.stdout);
+
+      expect(execArgv.find((a: string) => a.startsWith('--inspect'))).toBeTypeOf('string');
+      teardownProject();
+      expect(existsSync(project.baseDir)).toEqual(true);
+    } finally {
+      if (previousDebug === undefined) delete process.env.BINTASTIC_DEBUG;
+      else process.env.BINTASTIC_DEBUG = previousDebug;
+      project.dispose();
+    }
+  });
+
   test('runBinDebug preserves tmp dir on teardown without process.env mutation (CHK-005)', async () => {
     const { setupProject, teardownProject, runBinDebug } = createBintastic({
       binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
