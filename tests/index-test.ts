@@ -135,6 +135,29 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
+  test('runBin executes from the fixture project and reads nested fixture files', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      importMeta: import.meta,
+      binPath: 'fixtures/read-fixture.mjs',
+    });
+
+    const project = await setupProject();
+    project.files = {
+      nested: {
+        'input.txt': 'fixture content',
+      },
+    };
+    await project.write();
+
+    const result = await runBin();
+    expect(JSON.parse(result.stdout)).toEqual({
+      cwd: project.baseDir,
+      content: 'fixture content',
+    });
+
+    teardownProject();
+  });
+
   test('runBin can run the configured bin script with arguments', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
       importMeta: import.meta,
