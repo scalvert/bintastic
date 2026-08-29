@@ -1,3 +1,4 @@
+import { isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execaNode, type Options, type ResultPromise } from 'execa';
 import BintasticProject from './project';
@@ -201,9 +202,17 @@ export function createBintastic<TProject extends BintasticProject>(
         ? mergedOptions.binPath(forProject)
         : mergedOptions.binPath;
 
-    return mergedOptions.importMeta
-      ? fileURLToPath(new URL(rawBinPath, mergedOptions.importMeta.url))
-      : rawBinPath;
+    if (mergedOptions.importMeta) {
+      return fileURLToPath(new URL(rawBinPath, mergedOptions.importMeta.url));
+    }
+
+    if (!isAbsolute(rawBinPath)) {
+      throw new Error(
+        '[bintastic] binPath must be an absolute path when importMeta is not provided'
+      );
+    }
+
+    return rawBinPath;
   }
 
   /**
