@@ -48,6 +48,17 @@ describe('createBintastic', () => {
     expect(project).toBeInstanceOf(FakeProject);
   });
 
+  test('setupProject should accept a synchronous custom project factory', async () => {
+    const { setupProject } = createBintastic({
+      binPath: './foo',
+      createProject: () => new FakeProject(),
+    });
+
+    const project = await setupProject();
+
+    expect(project).toBeInstanceOf(FakeProject);
+  });
+
   test('teardownProject should result in the project being disposed of', async () => {
     const { setupProject, teardownProject } = createBintastic({
       binPath: './foo',
