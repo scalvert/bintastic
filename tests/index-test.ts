@@ -62,6 +62,20 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
+  test('runBin rejects a relative binPath without importMeta', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      binPath: './fixtures/fake-bin.js',
+    });
+
+    await setupProject();
+
+    expect(() => runBin()).toThrow(
+      '[bintastic] binPath must be an absolute path when importMeta is not provided'
+    );
+
+    teardownProject();
+  });
+
   test('runBin resolves a relative binPath against importMeta.url', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
       importMeta: import.meta,
