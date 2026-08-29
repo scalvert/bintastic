@@ -248,6 +248,29 @@ describe('createBintastic', () => {
     expect(existsSync(project.baseDir)).toEqual(false);
   });
 
+  test('runBinDebug overrides disabled env and caller nodeOptions', async () => {
+    const { setupProject, teardownProject, runBinDebug } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
+    });
+
+    const project = await setupProject();
+    const previousDebug = process.env.BINTASTIC_DEBUG;
+
+    try {
+      process.env.BINTASTIC_DEBUG = 'false';
+      const result = await runBinDebug({ nodeOptions: [] });
+      const execArgv = JSON.parse(result.stdout);
+
+      expect(execArgv.find((a: string) => a.startsWith('--inspect'))).toBeTypeOf('string');
+      teardownProject();
+      expect(existsSync(project.baseDir)).toEqual(true);
+    } finally {
+      if (previousDebug === undefined) delete process.env.BINTASTIC_DEBUG;
+      else process.env.BINTASTIC_DEBUG = previousDebug;
+      project.dispose();
+    }
+  });
+
   test('runBinDebug preserves tmp dir on teardown without process.env mutation (CHK-005)', async () => {
     const { setupProject, teardownProject, runBinDebug } = createBintastic({
       binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
@@ -287,6 +310,34 @@ describe('createBintastic', () => {
     teardownProject();
   });
 
+  test('teardownProject invalidates the disposed project', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      binPath: './foo',
+    });
+
+    await setupProject();
+    teardownProject();
+
+    expect(() => runBin()).toThrow('[bintastic] setupProject() must be called before runBin()');
+  });
+
+  test('debug preservation does not leak to a replacement project', async () => {
+    const { setupProject, teardownProject, runBinDebug } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
+    });
+
+    const preservedProject = await setupProject();
+    await runBinDebug({});
+    teardownProject();
+    expect(existsSync(preservedProject.baseDir)).toEqual(true);
+
+    const replacementProject = await setupProject();
+    teardownProject();
+
+    expect(existsSync(replacementProject.baseDir)).toEqual(false);
+    preservedProject.dispose();
+  });
+
   test('BINTASTIC_DEBUG preserves tmp dir on teardown', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
       binPath: fileURLToPath(new URL('fixtures/fake-bin.js', import.meta.url)),
@@ -308,6 +359,26 @@ describe('createBintastic', () => {
     }
 
     expect(existsSync(project.baseDir)).toEqual(false);
+  });
+});
+
+describe('BintasticProject', () => {
+  test('restores the cwd that was active before chdir', async () => {
+    const originalCwd = process.cwd();
+    const callerProject = new BintasticProject();
+    const targetProject = new BintasticProject();
+
+    try {
+      process.chdir(callerProject.baseDir);
+      await targetProject.chdir();
+      await targetProject.chdir();
+      targetProject.dispose();
+
+      expect(process.cwd()).toEqual(callerProject.baseDir);
+    } finally {
+      callerProject.dispose();
+      process.chdir(originalCwd);
+    }
   });
 });
 
@@ -345,6 +416,24 @@ describe('json', () => {
     expect(() => json`{ "value": ${{ count: Number.NaN }} }`).toThrow(
       '[bintastic] json template values must be JSON-serializable'
     );
+  });
+
+  test('throws when unsupported values are nested inside an interpolated value', () => {
+    const omitted = Reflect.get({}, 'missing');
+    const unsupportedValues = [
+      { nested: omitted },
+      { nested: () => {} },
+      { nested: Symbol('unsupported') },
+      [omitted],
+      [() => {}],
+      [Symbol('unsupported')],
+    ];
+
+    for (const value of unsupportedValues) {
+      expect(() => json`{ "value": ${value} }`).toThrow(
+        '[bintastic] json template values must be JSON-serializable'
+      );
+    }
   });
 
   test('throws a branded error when an interpolated value is a BigInt', () => {
