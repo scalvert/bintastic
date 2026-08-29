@@ -270,6 +270,34 @@ describe('createBintastic', () => {
     teardownProject();
   });
 
+  test('teardownProject invalidates the disposed project', async () => {
+    const { setupProject, teardownProject, runBin } = createBintastic({
+      binPath: './foo',
+    });
+
+    await setupProject();
+    teardownProject();
+
+    expect(() => runBin()).toThrow('[bintastic] setupProject() must be called before runBin()');
+  });
+
+  test('debug preservation does not leak to a replacement project', async () => {
+    const { setupProject, teardownProject, runBinDebug } = createBintastic({
+      binPath: fileURLToPath(new URL('fixtures/print-exec-argv.js', import.meta.url)),
+    });
+
+    const preservedProject = await setupProject();
+    await runBinDebug({});
+    teardownProject();
+    expect(existsSync(preservedProject.baseDir)).toEqual(true);
+
+    const replacementProject = await setupProject();
+    teardownProject();
+
+    expect(existsSync(replacementProject.baseDir)).toEqual(false);
+    preservedProject.dispose();
+  });
+
   test('BINTASTIC_DEBUG preserves tmp dir on teardown', async () => {
     const { setupProject, teardownProject, runBin } = createBintastic({
       binPath: fileURLToPath(new URL('fixtures/fake-bin.js', import.meta.url)),
