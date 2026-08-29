@@ -322,6 +322,26 @@ describe('createBintastic', () => {
   });
 });
 
+describe('BintasticProject', () => {
+  test('restores the cwd that was active before chdir', async () => {
+    const originalCwd = process.cwd();
+    const callerProject = new BintasticProject();
+    const targetProject = new BintasticProject();
+
+    try {
+      process.chdir(callerProject.baseDir);
+      await targetProject.chdir();
+      await targetProject.chdir();
+      targetProject.dispose();
+
+      expect(process.cwd()).toEqual(callerProject.baseDir);
+    } finally {
+      callerProject.dispose();
+      process.chdir(originalCwd);
+    }
+  });
+});
+
 describe('json', () => {
   test('stringifies JSON template content', () => {
     expect(json`{ "foo": "bar" }`).toEqual('{"foo":"bar"}');
