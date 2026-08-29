@@ -233,12 +233,15 @@ export function createBintastic<TProject extends BintasticProject>(
     const optionsEnv = parsedArgs.execaOptions.env;
     const configuredDebugMode = optionsEnv?.BINTASTIC_DEBUG ?? process.env.BINTASTIC_DEBUG;
     const debugMode = forcedDebugMode ?? getDebugMode(configuredDebugMode);
-    const nodeOptions =
-      debugMode === 'break'
-        ? ['--inspect-brk=0']
-        : debugMode === 'attach'
-          ? ['--inspect=0']
-          : undefined;
+    const inheritedNodeOptions = process.execArgv.filter(
+      (option) => !option.startsWith('--inspect')
+    );
+    const nodeOptions = debugMode
+      ? [
+          ...inheritedNodeOptions,
+          ...(debugMode === 'break' ? ['--inspect-brk=0'] : ['--inspect=0']),
+        ]
+      : inheritedNodeOptions;
 
     if (debugMode) {
       _preserveFixtures = true;
@@ -250,8 +253,9 @@ export function createBintastic<TProject extends BintasticProject>(
     return execaNode(binPath, [...mergedOptions.staticArgs, ...parsedArgs.args], {
       reject: false,
       cwd: resolvedCwd,
+      nodeOptions,
       ...parsedArgs.execaOptions,
-      ...(nodeOptions ? { nodeOptions } : {}),
+      ...(debugMode ? { nodeOptions } : {}),
     });
   }
 
