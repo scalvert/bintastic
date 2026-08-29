@@ -37,9 +37,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . && npm run format:check && npm run docs:check",
-    "prepublishOnly": "npm run build",
+    "prepack": "npm run build",
     "test": "npm run lint && npm run test:vitest",
     "test:vitest": "vitest run",
+    "test:package": "node scripts/package-smoke-test.mjs",
     "test:watch": "vitest",
     "watch": "npm run build -- --watch src",
     "docs:api": "typedoc",
@@ -52,6 +53,7 @@
   ],
   "dependencies": {
     "execa": "^9.6.1",
+    "fixturify": "^3.0.0",
     "fixturify-project": "^7.1.3"
   },
   "devDependencies": {
@@ -71,7 +73,6 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-unicorn": "^64.0.0",
-    "fixturify": "^3.0.0",
     "markdown-code": "^1.0.0",
     "prettier": "^3.5.3",
     "release-it": "^20.2.1",

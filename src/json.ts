@@ -10,6 +10,10 @@ function stringifyTemplateValue(value: unknown): string {
 
   try {
     stringified = JSON.stringify(value, (_key, current) => {
+      if (current === undefined || typeof current === 'function' || typeof current === 'symbol') {
+        throw new TypeError('[bintastic] unsupported JSON value');
+      }
+
       if (typeof current === 'number' && !Number.isFinite(current)) {
         throw new TypeError('[bintastic] non-finite number');
       }

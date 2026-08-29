@@ -1,10 +1,8 @@
 import { execa, type ResultPromise } from 'execa';
 import { Project } from 'fixturify-project';
 
-const ROOT = process.cwd();
-
 export default class BintasticProject extends Project {
-  private _dirChanged = false;
+  private _previousCwd: string | undefined;
 
   /**
    * Constructs an instance of a BintasticProject.
@@ -34,11 +32,12 @@ export default class BintasticProject extends Project {
    * Changes a directory from inside the project.
    */
   async chdir(): Promise<void> {
-    this._dirChanged = true;
+    const previousCwd = this._previousCwd ?? process.cwd();
 
     await this.write();
-
     process.chdir(this.baseDir);
+
+    this._previousCwd = previousCwd;
   }
 
   /**
@@ -46,8 +45,11 @@ export default class BintasticProject extends Project {
    * @returns {void}
    */
   dispose(): void {
-    if (this._dirChanged) {
-      process.chdir(ROOT);
+    const previousCwd = this._previousCwd;
+    this._previousCwd = undefined;
+
+    if (previousCwd) {
+      process.chdir(previousCwd);
     }
 
     return super.dispose();

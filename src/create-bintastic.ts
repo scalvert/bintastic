@@ -1,3 +1,4 @@
+import { isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execaNode, type Options, type ResultPromise } from 'execa';
 import BintasticProject from './project';
@@ -25,7 +26,7 @@ interface BintasticOptionsBase<TProject> {
   /**
    * An optional function to use to create the project. Use this if you want to provide a custom implementation of a BintasticProject.
    */
-  createProject?: () => Promise<TProject>;
+  createProject?: () => TProject | PromiseLike<TProject>;
 }
 
 /**
@@ -102,6 +103,24 @@ export interface RunBin {
 type RunBinArgs = (string | Options)[];
 
 /**
+ * Normalizes the debug environment value into a supported debug mode.
+ * @param {unknown} value - The configured debug value.
+ * @returns {'attach' | 'break' | undefined} The normalized debug mode.
+ */
+function getDebugMode(value: unknown): 'attach' | 'break' | undefined {
+  if (value === undefined || value === false || value === 0) {
+    return undefined;
+  }
+
+  const normalized = String(value).toLowerCase();
+  if (normalized === '0' || normalized === 'false') {
+    return undefined;
+  }
+
+  return normalized === 'break' ? 'break' : 'attach';
+}
+
+/**
  * The result returned by createBintastic.
  */
 export interface CreateBintasticResult<TProject extends BintasticProject> {
@@ -163,7 +182,7 @@ function parseArgs(args: RunBinArgs): RunOptions {
 export function createBintastic<TProject extends BintasticProject>(
   options: BintasticOptions<TProject>
 ): CreateBintasticResult<TProject> {
-  let project: TProject;
+  let project: TProject | undefined;
   let _preserveFixtures = false;
 
   const mergedOptions = {
@@ -183,9 +202,17 @@ export function createBintastic<TProject extends BintasticProject>(
         ? mergedOptions.binPath(forProject)
         : mergedOptions.binPath;
 
-    return mergedOptions.importMeta
-      ? fileURLToPath(new URL(rawBinPath, mergedOptions.importMeta.url))
-      : rawBinPath;
+    if (mergedOptions.importMeta) {
+      return fileURLToPath(new URL(rawBinPath, mergedOptions.importMeta.url));
+    }
+
+    if (!isAbsolute(rawBinPath)) {
+      throw new Error(
+        '[bintastic] binPath must be an absolute path when importMeta is not provided'
+      );
+    }
+
+    return rawBinPath;
   }
 
   /**
@@ -193,30 +220,42 @@ export function createBintastic<TProject extends BintasticProject>(
    * flags, and updates _preserveFixtures so teardownProject sees debug state correctly.
    * @param {RunOptions} parsedArgs - Already-parsed arguments and execa options.
    * @param {string} binPath - Resolved path to the bin script.
+   * @param {'attach' | 'break'} [forcedDebugMode] - Optional debug mode forced by runBinDebug.
    * @returns {ResultPromise} An instance of execa's result promise.
    */
-  function _runBinInternal(parsedArgs: RunOptions, binPath: string): ResultPromise {
+  function _runBinInternal(
+    parsedArgs: RunOptions,
+    binPath: string,
+    forcedDebugMode?: 'attach' | 'break'
+  ): ResultPromise {
+    if (!project) throw new Error('[bintastic] setupProject() must be called before running a bin');
+    const activeProject = project;
     const optionsEnv = parsedArgs.execaOptions.env;
-    const debugEnv = optionsEnv?.BINTASTIC_DEBUG ?? process.env.BINTASTIC_DEBUG;
+    const configuredDebugMode = optionsEnv?.BINTASTIC_DEBUG ?? process.env.BINTASTIC_DEBUG;
+    const debugMode = forcedDebugMode ?? getDebugMode(configuredDebugMode);
+    const inheritedNodeOptions = process.execArgv.filter(
+      (option) => !option.startsWith('--inspect')
+    );
+    const nodeOptions = debugMode
+      ? [
+          ...inheritedNodeOptions,
+          ...(debugMode === 'break' ? ['--inspect-brk=0'] : ['--inspect=0']),
+        ]
+      : inheritedNodeOptions;
 
-    const nodeOptions: string[] = [];
-    if (debugEnv && debugEnv !== '0' && debugEnv.toLowerCase() !== 'false') {
+    if (debugMode) {
       _preserveFixtures = true;
-      if (debugEnv.toLowerCase() === 'break') {
-        nodeOptions.push('--inspect-brk=0');
-      } else {
-        nodeOptions.push('--inspect=0');
-      }
-      console.log(`[bintastic] Debugging enabled. Fixture: ${project.baseDir}`);
+      console.log(`[bintastic] Debugging enabled. Fixture: ${activeProject.baseDir}`);
     }
 
-    const resolvedCwd = parsedArgs.execaOptions.cwd ?? project.baseDir;
+    const resolvedCwd = parsedArgs.execaOptions.cwd ?? activeProject.baseDir;
 
     return execaNode(binPath, [...mergedOptions.staticArgs, ...parsedArgs.args], {
       reject: false,
       cwd: resolvedCwd,
       nodeOptions,
       ...parsedArgs.execaOptions,
+      ...(debugMode ? { nodeOptions } : {}),
     });
   }
 
@@ -237,44 +276,53 @@ export function createBintastic<TProject extends BintasticProject>(
   function runBinDebug(...args: RunBinArgs): ResultPromise {
     if (!project) throw new Error('[bintastic] setupProject() must be called before runBinDebug()');
     const parsedArgs = parseArgs(args);
-    const debugEnv = process.env.BINTASTIC_DEBUG || 'attach';
+    const debugMode =
+      String(process.env.BINTASTIC_DEBUG).toLowerCase() === 'break' ? 'break' : 'attach';
     parsedArgs.execaOptions = {
       ...parsedArgs.execaOptions,
       env: {
         ...parsedArgs.execaOptions.env,
-        BINTASTIC_DEBUG: debugEnv,
+        BINTASTIC_DEBUG: debugMode,
       },
     };
-    return _runBinInternal(parsedArgs, resolveBinPath(project));
+    return _runBinInternal(parsedArgs, resolveBinPath(project), debugMode);
   }
 
   /**
    * Sets up the specified project for use within tests.
    */
   async function setupProject() {
-    if (project) {
-      project.dispose();
+    const previousProject = project;
+    project = undefined;
+    _preserveFixtures = false;
+
+    if (previousProject) {
+      previousProject.dispose();
     }
 
-    project =
+    const nextProject =
       typeof mergedOptions.createProject === 'function'
         ? await mergedOptions.createProject()
         : (new BintasticProject() as TProject);
 
-    await project.write();
+    try {
+      await nextProject.write();
+    } catch (error) {
+      nextProject.dispose();
+      throw error;
+    }
 
-    return project;
+    project = nextProject;
+    return nextProject;
   }
 
   /**
    * Sets up a tmp directory for use within tests.
    */
   async function setupTmpDir() {
-    if (typeof project === 'undefined') {
-      await setupProject();
-    }
+    const activeProject = project ?? (await setupProject());
 
-    return project.baseDir;
+    return activeProject.baseDir;
   }
 
   /**
@@ -284,14 +332,16 @@ export function createBintastic<TProject extends BintasticProject>(
   function teardownProject() {
     if (!project)
       throw new Error('[bintastic] setupProject() must be called before teardownProject()');
+    const activeProject = project;
     const debugEnv = process.env.BINTASTIC_DEBUG;
     if (_preserveFixtures || (debugEnv && debugEnv !== '0' && debugEnv.toLowerCase() !== 'false')) {
-      console.log(`[bintastic] Fixture preserved: ${project.baseDir}`);
+      console.log(`[bintastic] Fixture preserved: ${activeProject.baseDir}`);
       _preserveFixtures = false;
       return;
     }
 
-    project.dispose();
+    activeProject.dispose();
+    project = undefined;
   }
 
   return {
