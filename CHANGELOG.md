@@ -7,6 +7,34 @@
 
 
 
+## v4.2.1 (2026-08-30)
+
+#### :bug: Bug Fix
+
+- [#335](https://github.com/scalvert/bintastic/pull/335) fix: preserve parent Node options ([@scalvert](https://github.com/scalvert))
+- [#338](https://github.com/scalvert/bintastic/pull/338) fix: validate unresolved bin paths ([@scalvert](https://github.com/scalvert))
+- [#337](https://github.com/scalvert/bintastic/pull/337) fix: type synchronous project factories ([@scalvert](https://github.com/scalvert))
+- [#336](https://github.com/scalvert/bintastic/pull/336) fix: declare fixturify type dependency ([@scalvert](https://github.com/scalvert))
+- [#334](https://github.com/scalvert/bintastic/pull/334) fix: make debug mode authoritative ([@scalvert](https://github.com/scalvert))
+- [#333](https://github.com/scalvert/bintastic/pull/333) fix: restore caller working directory ([@scalvert](https://github.com/scalvert))
+- [#332](https://github.com/scalvert/bintastic/pull/332) fix: invalidate disposed project state ([@scalvert](https://github.com/scalvert))
+- [#331](https://github.com/scalvert/bintastic/pull/331) fix: reject nested unsupported JSON values ([@scalvert](https://github.com/scalvert))
+
+#### :memo: Documentation
+
+- [#309](https://github.com/scalvert/bintastic/pull/309) docs: add VitePress documentation site with integrated API reference ([@scalvert](https://github.com/scalvert))
+
+#### :house: Internal
+
+- [#340](https://github.com/scalvert/bintastic/pull/340) test: cover fixture integration contract ([@scalvert](https://github.com/scalvert))
+- [#339](https://github.com/scalvert/bintastic/pull/339) test: smoke test packed consumers ([@scalvert](https://github.com/scalvert))
+
+#### Committers: 1
+
+- Steve Calvert ([@scalvert](https://github.com/scalvert))
+
+
+
 ## v4.2.0 (2026-06-10)
 
 #### :rocket: Enhancement
