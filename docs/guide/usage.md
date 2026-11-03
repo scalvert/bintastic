@@ -37,6 +37,8 @@ const project = await setupProject(); // creates temp directory
 teardownProject(); // removes temp directory
 ```
 
+In debug mode, `teardownProject` keeps the directory on disk so you can inspect it. See [Debugging](./debugging).
+
 `teardownProject` also returns to the working directory you were in before `project.chdir()`, and it's safe to call when no project is active, so an `afterEach` can't mask a failure in `beforeEach`. Calling `setupProject` again without tearing down first tears the previous project down for you.
 
 To leave a project's directory without removing it, call `project.restoreCwd()`.

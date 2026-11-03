@@ -1,7 +1,6 @@
 import { execaNode, type Options, type ResultPromise } from 'execa';
 import BintasticProject from './project';
-import { createProjectLifecycle } from './project-lifecycle';
-import { planRun, type RunBinArgs } from './run-plan';
+import { planRun, resolveDebugMode, type RunBinArgs } from './run-plan';
 
 /**
  * Options shared by every way of configuring bintastic.
@@ -119,52 +118,93 @@ export interface CreateBintasticResult<TProject extends BintasticProject> {
 
 /**
  * Creates the bintastic API functions to use within tests.
+ *
+ * The returned functions share one active Project. It is idle until `setupProject`,
+ * active until `teardownProject`, and preserved at teardown when any Run against it
+ * was in Debug mode or `BINTASTIC_DEBUG` is on in the process env.
  * @param {BintasticOptions<TProject>} options - An object of bintastic options
  * @returns {CreateBintasticResult<TProject>} - A project instance.
  */
 export function createBintastic<TProject extends BintasticProject>(
   options: BintasticOptions<TProject>
 ): CreateBintasticResult<TProject> {
-  const lifecycle = createProjectLifecycle<TProject>({
-    createProject:
-      typeof options.createProject === 'function'
-        ? options.createProject
-        : () => new BintasticProject() as TProject,
-    env: process.env,
-  });
+  const createProject =
+    typeof options.createProject === 'function'
+      ? options.createProject
+      : () => new BintasticProject() as TProject;
+
+  let active: TProject | undefined;
+  let preserved = false;
 
   /**
-   * Returns the active Project, or throws if setupProject() hasn't been called.
-   * @param {string} caller - The public function name used in the error message.
-   * @returns {TProject} The active Project.
+   * Releases the active Project: restores cwd, then removes the directory unless the
+   * Project is preserved. A no-op when idle.
    */
-  function requireProject(caller: string): TProject {
-    const project = lifecycle.active;
-    if (!project) throw new Error(`[bintastic] setupProject() must be called before ${caller}()`);
+  function teardownProject(): void {
+    const project = active;
+    const keep = preserved || resolveDebugMode({ env: process.env }) !== undefined;
+    active = undefined;
+    preserved = false;
+
+    if (!project) {
+      return;
+    }
+
+    if (keep) {
+      project.restoreCwd();
+      console.log(`[bintastic] Fixture preserved: ${project.baseDir}`);
+      return;
+    }
+
+    project.dispose();
+  }
+
+  /**
+   * Tears down any active Project, then creates, writes, and activates a new one.
+   * @returns {Promise<TProject>} The new active Project.
+   */
+  async function setupProject(): Promise<TProject> {
+    teardownProject();
+
+    const project = await createProject();
+
+    try {
+      await project.write();
+    } catch (error) {
+      project.dispose();
+      throw error;
+    }
+
+    active = project;
     return project;
   }
 
   /**
-   * Plans and starts a Run against the active Project. Debug mode marks the Project
-   * as preserved so teardownProject leaves it on disk.
-   * @param {TProject} activeProject - The Project to run against.
+   * Plans and starts a Run against the active Project. The first Debug mode Run marks
+   * the Project as preserved and logs its path.
+   * @param {string} caller - The public function name used in the error message.
    * @param {RunBinArgs} args - Arguments or execa options.
    * @param {boolean} forceDebug - True for runBinDebug.
    * @returns {ResultPromise} An instance of execa's result promise.
    */
-  function run(activeProject: TProject, args: RunBinArgs, forceDebug: boolean): ResultPromise {
+  function run(caller: string, args: RunBinArgs, forceDebug: boolean): ResultPromise {
+    const project = active;
+    if (!project) {
+      throw new Error(`[bintastic] setupProject() must be called before ${caller}()`);
+    }
+
     const plan = planRun({
       config: options,
-      project: activeProject,
+      project,
       args,
       forceDebug,
       env: process.env,
       execArgv: process.execArgv,
     });
 
-    if (plan.debugMode) {
-      lifecycle.preserve();
-      console.log(`[bintastic] Debugging enabled. Fixture: ${activeProject.baseDir}`);
+    if (!preserved && plan.debugMode) {
+      preserved = true;
+      console.log(`[bintastic] Debugging enabled. Fixture: ${project.baseDir}`);
     }
 
     return execaNode(plan.file, plan.args, plan.options);
@@ -175,7 +215,7 @@ export function createBintastic<TProject extends BintasticProject>(
    * @returns {ResultPromise} An instance of execa's result promise.
    */
   function runBin(...args: RunBinArgs): ResultPromise {
-    return run(requireProject('runBin'), args, false);
+    return run('runBin', args, false);
   }
 
   /**
@@ -183,23 +223,23 @@ export function createBintastic<TProject extends BintasticProject>(
    * @param {...RunBinArgs} args Arguments identical to runBin
    */
   function runBinDebug(...args: RunBinArgs): ResultPromise {
-    return run(requireProject('runBinDebug'), args, true);
+    return run('runBinDebug', args, true);
   }
 
   /**
    * Sets up a tmp directory for use within tests.
    */
   async function setupTmpDir() {
-    const activeProject = lifecycle.active ?? (await lifecycle.setup());
+    const project = active ?? (await setupProject());
 
-    return activeProject.baseDir;
+    return project.baseDir;
   }
 
   return {
     runBin,
     runBinDebug,
-    setupProject: () => lifecycle.setup(),
-    teardownProject: () => lifecycle.teardown(),
+    setupProject,
+    teardownProject,
     setupTmpDir,
   };
 }
