@@ -7,11 +7,12 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 **NEVER release, publish, or attempt to release this package.** Do not:
 
 - Run `npm publish` or `release-it`
+- Start the Release workflow (`gh workflow run release.yml`), even as a dry run
 - Modify version numbers in package.json for release purposes
 - Amend or modify release commits
 - Create release tags
 
-The maintainer handles all releases manually.
+The maintainer releases with the Release workflow. See `RELEASE.md`.
 
 ## Project Overview
 
