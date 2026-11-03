@@ -50,9 +50,6 @@ jobs:
         with:
           # The changelog is built from the history since the last tag.
           fetch-depth: 0
-          # A branch with an upstream, not the pull request's merge commit:
-          # release-it requires one.
-          ref: ${{ github.head_ref || github.ref_name }}
 
       # Node from .mise.toml
       - name: Setup mise
@@ -61,8 +58,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      # A pull request checks out its merge commit, which has no upstream
+      # branch. Checking out the pull request's branch by name instead lets
+      # CodeQL flag cache poisoning, and a dry run pushes nothing anyway.
       - name: Dry run
-        run: npx release-it "$INCREMENT" --ci --dry-run
+        run: npx release-it "$INCREMENT" --ci --dry-run --no-git.requireUpstream
         env:
           INCREMENT: ${{ inputs.increment || 'minor' }}
           GITHUB_AUTH: ${{ github.token }}
