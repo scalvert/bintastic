@@ -244,6 +244,16 @@ describe('createBintastic', () => {
       expect(existsSync(first.baseDir)).toEqual(true);
     });
 
+    test('setupProject after a Debug mode Run preserves the old Project', async () => {
+      const { setupProject, runBinDebug } = bintasticFor('print-exec-argv.js');
+      const first = await setupProject();
+      await runBinDebug();
+
+      await setupProject();
+
+      expect(existsSync(first.baseDir)).toEqual(true);
+    });
+
     test('a Preserved Project survives the next setup, and preservation does not carry over', async () => {
       const { setupProject, teardownProject, runBinDebug } = bintasticFor('print-exec-argv.js');
       const preserved = await setupProject();

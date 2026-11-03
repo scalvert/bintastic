@@ -23,7 +23,7 @@ The value is read the same way everywhere:
 await runBin('--flag', { env: { BINTASTIC_DEBUG: 'break' } });
 ```
 
-A run's `env` only decides whether that run starts under the inspector. It can't stop the fixture being kept: if `BINTASTIC_DEBUG` is on in the process environment, the directory stays on disk even when a run passes `BINTASTIC_DEBUG: 'false'`.
+Turning debugging on for one run also keeps that run's fixture. Turning it off for one run only skips the inspector: if `BINTASTIC_DEBUG` is on in the process environment, the directory stays on disk even when a run passes `BINTASTIC_DEBUG: 'false'`.
 
 `bintastic` reads `BINTASTIC_DEBUG` itself; it does not add the variable to your CLI's environment.
 
